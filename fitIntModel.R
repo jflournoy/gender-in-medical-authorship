@@ -10,7 +10,7 @@ if(!file.exists(intModelFName)){
                     data=indivLevDatSample, 
                     family='binomial')
   saveRDS(intModel, intModelFName)
-} else
+} else {
   intModel <- readRDS(intModelFName)
 }
 summary(intModel)

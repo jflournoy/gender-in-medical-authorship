@@ -9,7 +9,7 @@ if(!file.exists(slopeModelFName)){
                       data=indivLevDatSample, 
                       family='binomial')  
   saveRDS(slopeModel, slopeModelFName)
-} else
+} else {
   slopeModel <- readRDS(slopeModelFName)
 }
 summary(slopeModel)
