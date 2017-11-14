@@ -25,3 +25,7 @@ if(!file.exists('./RData/indivLevelDat.RDS')){
 } else {
   indivLevelDat <- readRDS('./RData/indivLevelDat.RDS')
 }
+indivLevelDat$pubyear_c <- as.numeric(indivLevelDat$pubDate)-2014
+
+indivLevDatSample <- sample_frac(group_by(indivLevelDat, term),
+                                                 size=.1)
