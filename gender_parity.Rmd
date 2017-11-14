@@ -1,0 +1,250 @@
+---
+title: "Gender bias in author prestige"
+author: "John Flournoy"
+date: "11/14/2017"
+output: 
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE, warning=F, error=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning=F, error=F, message=F)
+library(tidyverse)
+library(data.table)
+knitr::read_chunk('./loadIndivData.R')
+knitr::read_chunk('./fitIntModel.R')
+knitr::read_chunk('./fitSlopeModel.R')
+```
+
+The goal of this analysis is to assess the degree to which female versus male authors are overrepresented in prestigious authorship positions. In medical literature, both first and last author positions cary prestige -- the first author position, because it is understood that this person is responsible for the publications core ideas and most of the work, and last author position because this person is seen to be responsible for most of the intellectual and financial support of the project. 
+
+## Bias, overrepresentation, parity
+
+There are at least two possible manifestations of gender inequity in published medical literature. First, disparities in opportunities to conduct and publish research may result in differences in the proportion of a fields female practitioners, and female authors. However, regardless of the proportion of female authors out of the total number of authors, disparities might also result in differences between the probability of female authors being being in prestigious authorship positions relative to male authors.
+
+On the first point, there is evidence in these data to suggest that across fields diversity as measured inversely by the difference between the proportion of male and female authors and practictioners, is increasing. This is what the analyses in the current draft of the paper show.
+
+However, it is possible that certain fields and subfields may persistently overrepresent males or females for reasons that are not related to structural inequalities or inequalities in opportunity. In these cases, as well as balanced cases, it is important to evaluate whether, given the gender composition that is present, whether prestige is distributed without regard for gender. That is, regardless of the overall practitioner or author gender compostition, would a male author's probability of being a first or last author rather than a middle author be the same as a female author's? If there is true parity, the difference in probability of being a first or last author versus a middle author for both genders should just depend on the average number of middle authors.
+
+### Examples of (dis)parity
+
+This may be easiest to understand with a toy example. Imagine in the year 2049, the subfield of cybernetic surgury publishes 10 papers. This field sometimes has long author lists, and sometimes short author lists. Also, strangely, all of the female author names begin with X and all of the male author names begin with Y (and all end in an integer). The whole field comprises 20 people, 14 of whom are men. Each author is on two papers this year, and so we know _a priori_ that the overall representation of male authors on papers does not deviate from the proportion of male authors in the field (although this isn't so important as ultimately the population we care about are just the authors of papers). The five author lists are:
+
+```
+X1,  Y1,  Y2 
+X2,  X3,  Y3 
+X4,  Y4,  Y5,  Y6,  X5,  Y7 
+Y8,  X6,  Y9,  Y10 
+Y11, Y12, Y13, Y14 
+Y2,  Y1,  X1 
+Y3,  X3,  X2 
+Y7,  Y4,  Y5,  Y6,  X5,  X4 
+Y8,  X6,  Y9,  Y10 
+Y11, Y12, Y13, Y14 
+```
+
+Notice that the two sets of five author lists are identical except for swapping first and last author positions for the authors of the first three papers in each group. This is by design as will become apparent shortly.
+
+### Position does(n't) depend on gender
+
+To calculate the probability of any author being in any position (first, middle, last), we simply need to calculate the proportion of position k authors out of the total number of authors. The probability of an author being first author is simply the number of papers (N=10) divided by the number of authors (N=40), or $P(\text{first}) = 10\div 40 = `r 10/40`$. This proportion will be the same for the last author position, and so it is easy to see that half of all authors are middle authors so that $P(\text{middle}) = 20\div 40 = `r 20/40`$. Now, we can investigate these probabilities by gender. It's important to realize that we're no longer interersted in the proportion of, say, female first authors out of _all_ authors, but just the proportion of female first authors out of _all female_ authors -- that is, the conditional probability of being first author, given that one is female. This is because the first case depends both on the total representation of women in the author list relative to males and as well as position, while the second proportion only relies on the authorship position. However, if we think of drawing author position like a fair lottery, it is easy to see that a female author's chance of winning the lottery, all else being equal, shouldn't deviate from the probability overall. We can see that that is the case in this example. Since we know that there are 6 total females in the field, and each is on 2 papers, we know there are 12 total female authorships. By counting the number of X's in the first column, we see that we have 3 female first authors, so $P(\text{first}|F) = 3\div 12 = `r 3/12`$. This is the same for last author, and so for middle author we have $P(\text{middle}|F) = 6\div 12 = `r 6/12`$. For males we can follow the same procedure, yeilding $P(\text{first}|M) = 7\div 28 = `r 7/28`$, and $P(\text{middle}|M) = 14\div 28 = `r 14/28`$. So now we see that even in a field with unbalanced representation in authors' gender, we get equal probability of authorship position within each gender. Technically, $P(\text{first})=P(\text{first}|M)=P(\text{first}|F)$ or in other words, author position is not conditional on gender. 
+
+But we can make it so. It should be quite obvious that with a little rearranging of the author list above we can put the female authors entirely in the middle position such that $P(\text{first}|F) = 0\div 12 = `r 0/12`$, and $P(\text{first}|M) = 10\div 28 = `r round(10/28,2)`$. We can see in this case, the probability of being first, middle, or last author is now conditional on gender. This is _consistent_ with some kind of process that prevents female authors from being awarded prestigious authorship positions, though of course there may be other explanations. However, statistically, with a data set only consisting of author gender and position, this is all the statistical evidence we can muster to try to answer this question.
+
+### Gender does(n't) depend on position
+
+There is another way one might assess the same disparity above and that is by flipping the question from  "is the probability of being in a particular position conditional on gender" to "is gender conditional on author position". Although this may seem strange at first, this will allow us to statistically evaluate the statement "the proportion of males and females in the position of first author is not different from the proportion of males and females in middle author position." Again, consider the author list above. Calculating the proportion of male author versus female authors in first author position, we see that $P(M|\text{first}) = 7\div 10 = `r 7/10`$ and for middle authorship, $P(M|\text{middle}) = 14\div 20 = `r 14/20`$. These are the same, meaning the probability of being male is not conditional on authorship position. Stated from the perspective of a logistic regression model, we wouldn't be able to gain any information about gender just by knowing author position. And intuitively, thinking back to the idea of a lottery, we see that this should be the case under perfect parity: if men and women are equally likely to win the lottery, and all we know about someone is that they won, our best guess as to the probability of that person being male would just be the population proportion of males.
+
+Examining this in the case of non-parity, we will see that suddenly author position does give us information about the gender of the author. Moving all the female authors to the middle, $P(M|\text{first}) = 10\div 10 = `r 10/10`$, which is not the same as $P(M|\text{middle}) = 11\div 20 = `r 11/20`$. Suddenly, knowing an authors position tells us a great deal about their gender, which should not be the case under perfect parity.
+
+(As a bit of fun math, you can use Baye's theorem to flip back and forth between $P(\text{Gender}|\text{Position})$ and $P(\text{Position}|\text{Gender})$.)
+
+Again, I should stress the important limitation that such an analysis tells us nothing about the causes for this deviation from perfect parity. If we see that the proportion of men in middle author position is increased beyond parity, perhaps we could conclude that they just want the free ride that comes from a low effort author possition. If we see more women in middle author positions than would be expected, we might conclude that women are being kept away from the prestigious ends of the author list. Both of these conclusions would clearly be reaching well beyond the data.
+
+That is a good reminder that we actually have some data. Though the question of overall gender representation in a field, on author lists, and in certain positions are good, they are only a few pieces of the picture.
+
+## Data description and analysis
+
+First, I will provide descriptive graphs that illustrate, for each subfield, the relations between the kinds of probabilities that I describe above. Then, I will estimate a logistic hierarchical linear model and plot the model estimates for each field. 
+
+### Plotting the data
+
+The easiest probabilities described above to intuitively understand graphically are those dealing with the conditional probability of authorship position given gender, comparing each gender. We can descibe the differences between those conditional probabilities for both genders visually, which I'll do in the first set of plots, and we can also calculate a ratio between those probabilities which should be equal to 1 in the case of perfect parity, and either less than or greater than 1 as our data deviate from those probabilties. Because ratios are asymetrical, with a range of $[0,\infty)$, I'll actually plot $\log\Big(\frac{P(\text{Postion}|F)}{P(\text{Position|M})}\Big)$ so we get back to $(-\infty,\infty)$, with 0 as the parity point.
+
+```{r loaddata}
+dataDir <- '/home/jflournoy/Documents/UO/UCLA_Gender_Pub/output/output/'
+inputFiles <- dir(dataDir, 
+                  pattern='author.*csv',
+                  full.names = T)
+
+authorColClasses <- c(
+		'logical',
+		'character',
+		'character',
+		'character',
+		'character',
+		'character',
+		'integer',
+		'character',
+		'character')
+
+# fileDT <- rbindlist(lapply(inputFiles, fread, colClasses = authorColClasses)) %>%
+
+if(!file.exists('./RData/summaries.RDS')){
+  summaries<-data.table(filename = inputFiles, stringsAsFactors = F) %>%
+    group_by(filename) %>%
+    do({
+      aDT<-fread(as.character(.$filename[[1]]), colClasses=authorColClasses)
+      result<-aDT %>%
+        mutate(simple_sex=sub('.*?((fe)*male)','\\1',Author_Sex)) %>%
+        filter(simple_sex %in% c('male','female'), pubDate >= 2002) %>%
+        group_by(PubMed_ID) %>%
+        mutate(last=Author_Rank_in_Paper == max(Author_Rank_in_Paper) & Author_Rank_in_Paper != 1) %>%
+        group_by(simple_sex,pubDate) %>%
+        summarise(
+          n_tot=n(),
+          first_author=sum(Author_Rank_in_Paper %in% 1),
+          last_author=sum(last %in% TRUE),
+          middle_author=sum(!(Author_Rank_in_Paper %in% 1) & !(last %in% TRUE))) %>%
+        mutate(
+          first_author_prop=first_author/n_tot,
+          last_author_prop=last_author/n_tot,
+          middle_author_prop=middle_author/n_tot,
+          n_check=first_author+last_author+middle_author)
+      result
+    }) %>%
+    mutate(term=sub('.*/author_centric_(.*)\\.csv','\\1',filename))
+  saveRDS(summaries, './RData/summaries.RDS')
+} else {
+  summaries <- readRDS('./RData/summaries.RDS')
+}
+```
+
+In this plot, the important comparison in each cell is the difference between the line for males and the line for females. As described above, in a situation with perfect parity, the lines should overlap. Across cells within a subfield, it is interesting to note that as author lists become longer over time, as in genetics, the probability of being a middle author increases.
+
+```{r Position_by_Gender_Plot, fig.width=8, fig.height=40}
+propByGenderPlot <- summaries %>%
+  filter(!(term %in% c('podiatry', 'plastic surgery', 'optometry'))) %>%
+  select(filename:n_tot, matches('.*_prop'), term) %>%
+  gather(stat, value, first_author_prop:middle_author_prop, convert=T) %>%
+  mutate(stat_fact = factor(
+    stat,
+    levels = c('first_author_prop', 'middle_author_prop', 'last_author_prop'),
+    labels = c('P(First|Gender)', 'P(Middle|Gender)', 'P(Last|Gender)')),
+    term_fact = factor(term,
+                       levels = unique(term),
+                       labels = gsub(' ', '\n', unique(term)))) %>%
+  ggplot(aes(x = as.numeric(pubDate), y = value)) +
+  geom_point(aes(size = n_tot, color = simple_sex), alpha = .2) +
+  geom_smooth(method = 'loess', aes(color = simple_sex), se=F) +
+  facet_grid(term_fact ~ stat_fact) +
+  guides(size = guide_legend('N authors'),
+         color = guide_legend('Gender')) +
+  theme_classic() +
+  theme(strip.text = element_text(size = 8, margin = margin(0, 0, 0, 0, "in")),
+        strip.background = element_rect(fill = '#efefef', linetype = 0),
+        panel.spacing = unit(0, 'in'),
+        panel.background = element_rect(fill = '#ffffff'),
+        panel.border = element_rect(fill = NA, color = '#efefef', size = 1, linetype = 1)) + 
+labs(x = 'Publication year', y = 'P(position | gender)')
+print(propByGenderPlot)
+```
+
+In this plot we will see the log of the ratio of the two probabilities, and we can compare it to a line at y = 0. If the line is above 0, this means that female names are more likely to appear in this position, and if it's below 0, it means male names are more likely to appear. Pay attention to the plots with the biggest dots, as those dots index sample size within a field. For example, notice in education, female names are disproporionately likely to appear in the first position, increasingly over time, and less likely to appear in the last position, decreasing over time.
+
+Be careful not to read the dots as confidence intervals -- the bigger the dot, the more sure you can be that the black line is a precise estimate.
+
+```{r Position_by_Gender_Ratio_Plot, fig.width=8, fig.height=40}
+propByGenderRatioPlot <- summaries %>%
+  filter(!(term %in% c('podiatry', 'plastic surgery', 'optometry'))) %>%
+  select(filename:n_tot, matches('.*_prop'), term) %>%
+  gather(stat, value, first_author_prop:middle_author_prop, n_tot, convert=T) %>%
+  unite(stat_sex, stat, simple_sex) %>%
+  spread(stat_sex, value) %>%
+  ungroup() %>%
+  transmute(
+    filename = filename,
+    term = term,
+    pubDate = pubDate,
+    first_au_fm_ratio = first_author_prop_female / first_author_prop_male,
+    middle_au_fm_ratio = middle_author_prop_female / middle_author_prop_male,
+    last_au_fm_ratio = last_author_prop_female / last_author_prop_male,
+    n_tot = n_tot_female + n_tot_male) %>%
+  gather(stat, value, first_au_fm_ratio:last_au_fm_ratio) %>%
+  mutate(stat_fact=factor(
+    stat,
+    levels = c('first_au_fm_ratio','middle_au_fm_ratio','last_au_fm_ratio'),
+    labels = c('First', 
+               'Middle',
+               'Last')),
+    term_fact = factor(term,
+                       levels = unique(term),
+                       labels = gsub(' ', '\n', unique(term)))) %>%
+  ggplot(aes(x = as.numeric(pubDate), y = log(value))) +
+  geom_point(aes(size = n_tot), alpha = .2) +
+  geom_point(alpha = .3) +
+  geom_line(stat = 'smooth', method = 'loess', color = 'black') +
+  facet_grid(term_fact ~ stat_fact) +
+  geom_hline(yintercept = 0, color = 'black', alpha = .75) +
+  scale_y_continuous(breaks = c(-.25, 0, .25)) + 
+  guides(size = guide_legend('N authors')) + 
+  coord_cartesian(y = c(-.5, .5)) + 
+  theme_classic() +
+  theme(strip.text = element_text(size = 8, margin = margin(0, 0, 0, 0, "in")),
+        strip.background = element_rect(fill = '#efefef', linetype = 0),
+        panel.spacing = unit(0, 'in'),
+        panel.background = element_rect(fill = '#ffffff'),
+        panel.border = element_rect(fill = NA, color = '#efefef', size = 1, linetype = 1)) + 
+labs(x = 'Publication year', y =expression(paste(log, bgroup("(", frac("P(position | F)", "P(position | M)"), ")"))))
+print(propByGenderRatioPlot)
+```
+
+### Analysis
+
+Though the above descriptives are nice, and will help us interpret an analysis, we would like to control the error rate of our conclusions using _p_-values. We can model these data using the `lme4` package, which I do below. The basic model is going to capture the second set of conditional probabilities I mention above -- that is, the probability that an author is male, conditional on the author position.
+
+In our model, we'll use dummy variables for first and last author position, with middle author as the reference. This will tell us if each of the prestigious positions differs from the non-prestigious position in terms male over or under representation. Because most of the trends above are linear on average, I'll also include the linear effect of year of publication.
+
+The level 1 formula is
+
+$$\text{male}_{ij} = \beta_{0j} + \beta_{1j}\text{First}_{ij} + \beta_{2j}\text{Last}_{ij} + \beta_{3j}\text{Year}_{ij} + \beta_{4j}\text{First}_{ij}\text{Year}_{ij} + \beta_{5j}\text{Last}_{ij}\text{Year}_{ij} + \epsilon_{ij}$$
+and the grouping factor will be the Mesh term, with random effects estimated for all coefficient. This will allow us to fit a partially pooled estimate for each subfield, while retaining the ability to perform significance tests on the field as a whole.
+
+#### Load Data
+
+This requires individual level data, so let's load it.
+
+```{r loadIndivData}
+```
+
+Now fit the models. Center year at 2014.
+
+#### Null Model
+
+```{r fitlme4model}
+library(lme4)
+
+inv.logit <- function(alpha){
+  1/(1+exp(-alpha))
+}
+
+indivLevelDat$pubyear_c <- as.numeric(indivLevelDat$pubDate)-2014
+
+indivLevDatSample <- sample_frac(group_by(indivLevelDat, term),
+				 size=.1)
+
+nullModel <- glmer(male ~ 1 + (1|term), 
+                   data=indivLevDatSample, 
+                   family='binomial')
+summary(nullModel)
+```
+
+#### Full model, random intercepts
+
+```{r fitIntModel, eval=F}
+```
+
+#### Full model, random slopes
+
+```{r fitSlopeModel, eval=F}
+```
