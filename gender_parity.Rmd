@@ -11,6 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning=F, error=F, message=F)
 library(tidyverse)
 library(data.table)
+library(lme4)
 knitr::read_chunk('./loadIndivData.R')
 knitr::read_chunk('./fitIntModel.R')
 knitr::read_chunk('./fitSlopeModel.R')
@@ -221,9 +222,7 @@ Now fit the models. I'll center the publication year at 2014 so that our interce
 
 #### Null Model
 
-```{r fitlme4model, cache=T}
-library(lme4)
-
+```{r fitlme4model}
 inv.logit <- function(alpha){
   1/(1+exp(-alpha))
 }
