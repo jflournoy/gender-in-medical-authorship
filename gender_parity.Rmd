@@ -217,11 +217,11 @@ This requires individual level data, so let's load it.
 ```{r loadIndivData}
 ```
 
-Now fit the models. Center year at 2014.
+Now fit the models. I'll center the publication year at 2014 so that our intercept reflects the _current_ (well, as of 2014) state of the medical literature. This means that significant coefficients on the author position terms indicate a difference _as of_ the 2014 publication date. I will also standardize the publication date variable to make model estimation easier (logistic regression cares about that sort of thing). Finally, because the full data set is roughly 4 million rows, I will sample 10% of the data so that I have a chance of estimating the models within a day. I will estimate the full model on the full data set as well, but seeing that 10% of this data set is still over 400,000 rows, we should be pretty okay in terms of precision. Of note is that this 10% is sampled from each term to ensure that we don't randomly end up with an oddly stratified set.
 
 #### Null Model
 
-```{r fitlme4model}
+```{r fitlme4model, cache=T}
 library(lme4)
 
 inv.logit <- function(alpha){
@@ -234,12 +234,60 @@ nullModel <- glmer(male ~ 1 + (1|term),
 summary(nullModel)
 ```
 
+Using the inverse logit function to turn this intercept back into a probability of being male overall (or a proportion of males as estimated by the model). Below you can see the epected proportion of males across all subfields (black vertical line) at about $P = `r round(inv.logit(fixef(nullModel)[[1]]), 2)`$. The dotted gray line just highlightes $P = 0.50$ which would be equal numbers of male and female authors. Obviously this is not the model we care about because we're actually trying to assess whether, given these gender proportions, authorship is evenly or unevenly distributed across positions of prestige.
+
+```{r plotNull, fig.width=11, fig.height=8.5}
+rr1 <- ranef(nullModel, condVar = TRUE)
+op <- options(digits = 4)
+options(op)
+
+as.data.frame(rr1) %>%
+  mutate(grp = sub('.*/output//(.*)', '\\1', grp),
+         grp = factor(grp, levels = grp[order(condval)]),
+         condval = condval + fixef(nullModel)[[1]]) %>%
+  ggplot(aes(y = grp, x = inv.logit(condval))) +
+  geom_point() + 
+  facet_wrap(~ term, scales="free_x") +
+  geom_errorbarh(aes(xmin = inv.logit(condval - 2*condsd), 
+                     xmax = inv.logit(condval + 2*condsd)),
+                   height=0) +
+  geom_vline(xintercept = inv.logit(0.4860)) + 
+  geom_vline(xintercept = inv.logit(0), color = 'gray', linetype = 2) +
+  theme_classic()
+
+```
+
 #### Full model, random intercepts
+
+This model is close to the one we care about but assumes that over time all fields change in the same way (that is, it doens't estimate the publication year slope separately for each subfield). This model is being estimated just to check whether we need to worry about homogeneity in change. Looking at the descriptive plots above, I bet we do, but it's nice to have a statistical argument.
 
 ```{r fitIntModel, eval=F}
 ```
 
+Interpretting these coefficients, we can see that in 2014, it's slightly more likely for an author to be male if they are in the first position, and more likely to be male if they are in the last position, than the middle position, and that there are more males than females in the middle position (that's the intercept). We also see that across the three authorship positions, the author is less and less likely to be male over time. Note that this is on average, partially pooled across all subfields, and doens't allow the effect of publication year to varry across subfields.
+
 #### Full model, random slopes
+
+Now we estimate the full model across every subfield, with estimates partially pooled. This means each subfield can get a slope and intercept that deviate from the fixed effects.
 
 ```{r fitSlopeModel, eval=F}
 ```
+
+Again, interpretting these coefficients, we can see that in 2014, it's more likely for an author to be male if they are in the last position than the middle position, and there are more males in the middle position than females. Again, we see that across the three authorship positions, the author is less and less likely to be male over time. The is consistent with the overall finding that more women seem to be publishing in these fields over time.
+
+#### Model comparison
+
+Which of these models should we trust more?
+
+```{r compareModels}
+identical(unlist(intModel@frame), unlist(slopeModel@frame))
+knitr::kable(broom::tidy(anova(intModel, slopeModel)))
+```
+
+#### Subfield model estimate plots
+
+What we really want to see is the model estimated trend for each of the subfields. That will take a little bit more work.
+
+## Conclusion
+
+Our final model showed that, though distribution of authorship position seems to be moving toward parity, as of 2014, the last author position is held by more male authors than would be expected based on the underlying gender distribution of authors. In other words, on average, regardless of the overall proportion of males and females who author papers, there is not a significant difference between the probability that a middle versus a first author is male. However, it is significantly more likely that a last author is male versus female as of the publication date 2014. During the time period of this analysis, the probability of being male has become more similar between first and middle, and last and middle authorship indicating that while parity has improved, it has indeed been worse in the past.
