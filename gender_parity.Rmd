@@ -228,11 +228,6 @@ inv.logit <- function(alpha){
   1/(1+exp(-alpha))
 }
 
-indivLevelDat$pubyear_c <- as.numeric(indivLevelDat$pubDate)-2014
-
-indivLevDatSample <- sample_frac(group_by(indivLevelDat, term),
-				 size=.1)
-
 nullModel <- glmer(male ~ 1 + (1|term), 
                    data=indivLevDatSample, 
                    family='binomial')
