@@ -261,7 +261,7 @@ as.data.frame(rr1) %>%
 
 This model is close to the one we care about but assumes that over time all fields change in the same way (that is, it doens't estimate the publication year slope separately for each subfield). This model is being estimated just to check whether we need to worry about homogeneity in change. Looking at the descriptive plots above, I bet we do, but it's nice to have a statistical argument.
 
-```{r fitIntModel, eval=F}
+```{r fitIntModel, eval=T}
 ```
 
 Interpretting these coefficients, we can see that in 2014, it's slightly more likely for an author to be male if they are in the first position, and more likely to be male if they are in the last position, than the middle position, and that there are more males than females in the middle position (that's the intercept). We also see that across the three authorship positions, the author is less and less likely to be male over time. Note that this is on average, partially pooled across all subfields, and doens't allow the effect of publication year to varry across subfields.
@@ -270,7 +270,7 @@ Interpretting these coefficients, we can see that in 2014, it's slightly more li
 
 Now we estimate the full model across every subfield, with estimates partially pooled. This means each subfield can get a slope and intercept that deviate from the fixed effects.
 
-```{r fitSlopeModel, eval=F}
+```{r fitSlopeModel, eval=T}
 ```
 
 Again, interpretting these coefficients, we can see that in 2014, it's more likely for an author to be male if they are in the last position than the middle position, and there are more males in the middle position than females. Again, we see that across the three authorship positions, the author is less and less likely to be male over time. The is consistent with the overall finding that more women seem to be publishing in these fields over time.
